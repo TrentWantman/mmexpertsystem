@@ -1,18 +1,29 @@
-// This file will handle the connection to your Firestore database.
-// We will add the implementation for this in the next steps,
-// after you have set up your Firebase project.
+import admin from 'firebase-admin';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+const serviceAccount = require('../serviceAccountKey.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+
+// Converts a movie title like "Paddington 2" into a slug "paddington-2"
+function titleToSlug(title) {
+  return title.toLowerCase().replace(/\s+/g, '-');
+}
 
 export async function getMovieByTitle(title) {
-  // TODO: Implement Firestore fetching logic here
-  console.log(`Fetching movie from Firestore: ${title}`);
-  
-  // For now, return a mock object
-  return {
-    title: title,
-    year: 2024,
-    genre: "Unknown",
-    actors: ["Actor 1", "Actor 2"],
-    posterUrl: "https://via.placeholder.com/400x600",
-    trailerUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-  };
+  const movieSlug = titleToSlug(title);
+  const movieRef = db.collection('movies').doc(movieSlug);
+  const doc = await movieRef.get();
+
+  if (!doc.exists) {
+    console.log('No such document!');
+    return null;
+  } else {
+    return doc.data();
+  }
 }

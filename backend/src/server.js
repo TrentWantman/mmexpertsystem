@@ -27,8 +27,12 @@ app.get('/api/recommendations', async (req, res) => {
     // For the prototype, we assume the rule engine gives us one clear winner.
     const movieTitle = recommendedTitles[0];
     
-    // Fetch detailed information from our database (currently mocked)
+    // Fetch detailed information from our database
     const movieDetails = await getMovieByTitle(movieTitle);
+
+    if (!movieDetails) {
+      return res.status(404).send({ error: `Movie details not found for: ${movieTitle}` });
+    }
 
     res.send({ recommendations: [movieDetails] });
   } catch (error) {
