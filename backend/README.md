@@ -78,10 +78,11 @@ GEMINI_API_KEY=your_gemini_api_key
 
 1. In Firebase Console, go to **Firestore Database**
 2. Click **Create Database**
-3. Choose **Start in production mode**
-4. Select a location close to you
+3. Choose **Start in developer mode**
 
 ### 6. Seed the Database
+
+(skip this step if using a database already with movies)
 
 Populate the database with movies from TMDB:
 
@@ -242,7 +243,7 @@ backend/
 ## Troubleshooting
 
 ### "Firestore API not enabled"
-Go to Firebase Console > Firestore Database and create the database.
+Go to Firebase Console > Build > Firestore Database and create the database.
 
 ### "Invalid API key" for Gemini
 Make sure your Gemini API key is correct and the Gemini API is enabled in your Google Cloud project.
