@@ -1,16 +1,14 @@
 # Movie Mood Matcher - Backend
 
-This directory contains the backend server for the Movie Mood Matcher expert system. It's a Node.js application using Express.js that provides movie recommendations based on user input.
+A Node.js/Express backend for the Movie Mood Matcher expert system. This server provides an AI-powered conversational interface that recommends movies based on the user's mood, social context, and preferences.
 
----
+## Features
 
-## How It Works
-
-The backend has three main components:
-
-1.  **API Server (`server.js`):** An Express server that exposes a single API endpoint to the frontend.
-2.  **Rule Engine (`RuleEngine.js`):** The core of the expert system. It uses a predefined set of rules to match a user's `mood` and `genre` to a specific movie title.
-3.  **Database (`database.js`):** Connects to a Firestore database to fetch detailed information (poster, trailer, year, etc.) for the recommended movie.
+- **AI Chat Interface**: Uses Google Gemini to have natural conversations about mood and preferences
+- **Expert Rule System**: 15 mood categories with genre mappings, exclusions, and scoring keywords
+- **Context-Aware Filtering**: Adjusts recommendations based on social context (alone, date, family, friends)
+- **Movie Database**: 1000+ popular movies from TMDB stored in Firebase Firestore
+- **Smart Scoring**: Ranks movies based on mood relevance, genre match, popularity, and more
 
 ---
 
@@ -18,71 +16,239 @@ The backend has three main components:
 
 ### 1. Prerequisites
 
-- Make sure you have [Node.js](https://nodejs.org/) (version 18 or higher) installed on your machine.
+- [Node.js](https://nodejs.org/) version 18 or higher
+- A Firebase project with Firestore enabled
+- API keys for TMDB and Google Gemini
 
 ### 2. Install Dependencies
 
-Navigate to this `backend` directory in your terminal and run the following command to install the necessary packages:
-
 ```bash
+cd backend
 npm install
 ```
 
-### 3. Set Up Firebase Credentials
+### 3. Get API Keys
 
-This project requires a connection to a Firebase/Firestore database to retrieve movie details.
+You'll need three API keys:
 
-1.  You will need a `serviceAccountKey.json` file. This file contains the private credentials to access the Firebase project.
-2.  **This file is not in the repository for security reasons.** The team member who set up the Firebase project can provide you with this file.
-3.  Place the `serviceAccountKey.json` file in the root of this `backend` directory.
+#### Firebase (Firestore Database)
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project (or use existing)
+3. Go to **Project Settings** > **Service Accounts**
+4. Click **Generate New Private Key**
+5. Copy the values for `project_id`, `private_key`, and `client_email`
+
+#### TMDB (Movie Data)
+1. Go to [TMDB](https://www.themoviedb.org/) and create an account
+2. Go to **Settings** > **API**
+3. Request an API key (choose "Developer" option)
+4. Copy your API Key (v3 auth)
+
+#### Google Gemini (AI Chat)
+1. Go to [Google AI Studio](https://aistudio.google.com/apikey)
+2. Click **Create API Key**
+3. Copy the generated key
+
+### 4. Configure Environment Variables
+
+Copy the example file and fill in your keys:
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` with your actual credentials:
+
+```env
+# Firebase Service Account
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+
+# TMDB API Key
+TMDB_API_KEY=your_tmdb_api_key
+
+# Google Gemini API Key
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+**Note**: The `FIREBASE_PRIVATE_KEY` must include the `\n` characters and be wrapped in quotes.
+
+### 5. Enable Firestore
+
+1. In Firebase Console, go to **Firestore Database**
+2. Click **Create Database**
+3. Choose **Start in production mode**
+4. Select a location close to you
+
+### 6. Seed the Database
+
+Populate the database with movies from TMDB:
+
+```bash
+# Quick seed (no trailers, faster) - 1000 movies
+npm run seed:quick
+
+# Full seed (with trailers) - 1000 movies
+npm run seed
+
+# Custom count
+npm run seed:quick -- --count=500
+```
 
 ---
 
 ## Running the Server
 
-Once you have completed the setup, you can start the server with the following command:
-
 ```bash
 npm start
 ```
 
-You should see a confirmation message in your terminal:
-`Backend server is running on http://localhost:3000`
+The server will start at `http://localhost:3000`
 
 ---
 
-## API Endpoint
+## API Endpoints
 
-The server provides one main API endpoint for getting movie recommendations.
+### Chat Endpoints (Primary)
 
-### `GET /api/recommendations`
+#### `POST /api/chat/start`
+Start a new chat session.
 
-This endpoint uses the rule engine to find a movie that matches the user's mood and genre.
+**Response:**
+```json
+{
+  "sessionId": "uuid-string",
+  "message": "Hey there! How are you feeling tonight?",
+  "ready": false
+}
+```
 
--   **Query Parameters:**
-    -   `mood` (string, required): The user's selected mood (e.g., "Uplifting").
-    -   `genre` (string, required): The user's selected genre (e.g., "Comedy").
+#### `POST /api/chat/message`
+Send a message in an existing chat session.
 
--   **Example Request:**
-    ```
-    http://localhost:3000/api/recommendations?mood=Uplifting&genre=Comedy
-    ```
+**Request Body:**
+```json
+{
+  "sessionId": "uuid-from-start",
+  "message": "I'm feeling stressed and want to watch something with my family"
+}
+```
 
--   **Success Response (200 OK):**
-    ```json
+**Response (conversation continues):**
+```json
+{
+  "message": "Got it! How much time do you have?",
+  "ready": false
+}
+```
+
+**Response (recommendations ready):**
+```json
+{
+  "message": "Let me find some relaxing family-friendly movies for you!",
+  "ready": true,
+  "movies": [
     {
-      "recommendations": [
-        {
-          "title": "Paddington 2",
-          "genre": "Comedy",
-          "year": 2018,
-          "posterUrl": "https://...",
-          "trailerUrl": "https://..."
-        }
-      ]
+      "id": "paddington-2",
+      "title": "Paddington 2",
+      "year": 2017,
+      "genres": ["Family", "Comedy", "Adventure"],
+      "vote_average": 7.8,
+      "overview": "...",
+      "poster_url": "https://image.tmdb.org/...",
+      "backdrop_url": "https://image.tmdb.org/...",
+      "trailer_url": "https://youtube.com/watch?v=..."
     }
-    ```
+  ]
+}
+```
 
--   **Error Responses:**
-    -   `400 Bad Request`: If `mood` or `genre` are not provided.
-    -   `404 Not Found`: If no movie rule matches the provided `mood` and `genre`.
+#### `POST /api/chat/end`
+End a chat session (cleanup).
+
+**Request Body:**
+```json
+{
+  "sessionId": "uuid-from-start"
+}
+```
+
+### Other Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/movies` | GET | Query movies directly with filters |
+| `/api/genres` | GET | Get list of available genres |
+| `/api/recommendations` | GET | Legacy mood+genre endpoint |
+| `/api/health` | GET | Health check |
+
+---
+
+## Expert System Rules
+
+### Mood Categories
+
+The system understands 15 moods:
+
+| Mood | Recommended Genres | Excluded Genres |
+|------|-------------------|-----------------|
+| happy | Comedy, Animation, Family, Romance | Horror, War, Crime |
+| excited | Action, Adventure, Sci-Fi, Thriller | Documentary, Drama |
+| romantic | Romance, Drama, Comedy | Horror, War, Crime |
+| adventurous | Adventure, Fantasy, Sci-Fi, Action | Documentary |
+| inspired | Drama, Documentary, History | Horror, Comedy |
+| sad | Comedy, Animation, Family, Romance | Horror, War, Thriller |
+| stressed | Comedy, Animation, Family | Horror, Thriller, War, Crime |
+| anxious | Animation, Family, Documentary, Comedy | Horror, Thriller, War, Crime |
+| bored | Action, Thriller, Mystery, Sci-Fi, Adventure | - |
+| lonely | Romance, Comedy, Drama, Family | Horror |
+| scared | Horror, Thriller, Mystery | Comedy, Animation, Family |
+| thoughtful | Drama, Sci-Fi, Documentary, Mystery | Action, Animation |
+| nostalgic | Family, Animation, Comedy, Adventure | Horror |
+| curious | Documentary, History, Drama | Horror, Action |
+| escapist | Fantasy, Sci-Fi, Animation, Adventure | Documentary, Drama |
+
+### Context Rules
+
+| Context | Adjustments |
+|---------|-------------|
+| alone | All genres allowed |
+| date | Prefer Romance, Comedy, Drama; exclude Horror, Animation |
+| friends | Prefer Comedy, Action, Horror; exclude Romance, Documentary |
+| family | Family-friendly only; exclude Horror, Crime, Thriller, War |
+| kids | Animation, Family, Adventure only; strict content filtering |
+
+---
+
+## Project Structure
+
+```
+backend/
+├── src/
+│   ├── server.js        # Express server and API endpoints
+│   ├── chatService.js   # Gemini AI chat + expert rules
+│   ├── database.js      # Firestore connection and queries
+│   ├── tmdbFetcher.js   # TMDB API integration
+│   ├── seedDatabase.js  # Database seeding script
+│   └── RuleEngine.js    # Legacy rule engine (not used)
+├── .env                 # Environment variables (not in git)
+├── .env.example         # Template for environment variables
+└── package.json
+```
+
+---
+
+## Troubleshooting
+
+### "Firestore API not enabled"
+Go to Firebase Console > Firestore Database and create the database.
+
+### "Invalid API key" for Gemini
+Make sure your Gemini API key is correct and the Gemini API is enabled in your Google Cloud project.
+
+### "TMDB API error"
+Verify your TMDB API key at https://www.themoviedb.org/settings/api
+
+### No movies returned
+Run the seed script to populate the database: `npm run seed:quick`

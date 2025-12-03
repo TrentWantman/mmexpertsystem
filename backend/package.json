@@ -1,18 +1,25 @@
 {
-  "name": "backend",
+  "name": "movie-mood-matcher-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Expert system backend for movie recommendations",
+  "main": "src/server.js",
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seedDatabase.js",
+    "seed:quick": "node src/seedDatabase.js --quick",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": ["movie", "recommendation", "expert-system"],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "firebase-admin": "^12.1.1"
+    "firebase-admin": "^12.1.1",
+    "uuid": "^10.0.0"
   }
 }
